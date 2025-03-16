@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Protobuf Include="Protos\greet.proto" GrpcServices="Server"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Grpc.AspNetCore" Version="2.57.0"/>
+    </ItemGroup>
+    
+    <ItemGroup>
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/BlockchainInteraction/Models/Responses/wallet_responses.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/BlockchainInteraction/Models/Requests/wallet_requests.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/BlockchainInteraction/Rpc/BlockchainIneractionService.proto" GrpcServices="Client" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/Base/v1/Models/Responses/task_response.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/Base/v1/Models/Responses/error_model.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/PortfolioAnalytic/Models/Responses/analytic_responses.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/PortfolioAnalytic/Models/Requests/analytic_requests.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/PortfolioAnalytic/Rpc/PortfolioAnalyticService.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+    </ItemGroup>
+    
+    <!--Portfolio Protos-->
+    <ItemGroup>
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/PortfolioConfiguration/Models/Responses/portfolio_responses.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/PortfolioConfiguration/Models/Requests/portfolio_requests.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+        <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/PortfolioConfiguration/Rpc/PortfolioConfigurationService.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
+    </ItemGroup>
+    <ItemGroup>
+        <Folder Include=".github\" />
+        <Folder Include="Interfaces\" />
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\..\cryptic-domain\Cryptic Domain\Cryptic Domain.csproj" />
+    </ItemGroup>
+    
+</Project>

@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrypticAnalytic", "CrypticAnalytic\CrypticAnalytic\CrypticAnalytic.csproj", "{61117FA9-0500-4B21-930A-3756C6AEE67D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cryptic Domain", "cryptic-domain\Cryptic Domain\Cryptic Domain.csproj", "{013E1C84-5DA3-4570-8126-43422145507C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{61117FA9-0500-4B21-930A-3756C6AEE67D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61117FA9-0500-4B21-930A-3756C6AEE67D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61117FA9-0500-4B21-930A-3756C6AEE67D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61117FA9-0500-4B21-930A-3756C6AEE67D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{013E1C84-5DA3-4570-8126-43422145507C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{013E1C84-5DA3-4570-8126-43422145507C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{013E1C84-5DA3-4570-8126-43422145507C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{013E1C84-5DA3-4570-8126-43422145507C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
