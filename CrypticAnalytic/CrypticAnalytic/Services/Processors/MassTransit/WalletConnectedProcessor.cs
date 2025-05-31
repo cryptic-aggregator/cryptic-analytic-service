@@ -32,7 +32,7 @@ public class WalletConnectedProcessor
             _logger.LogInformation("WalletConnectedProcessor: обробка WalletId={WalletId}, Address={Address}",
                 walletId, walletAddress);
             
-            var existingWallet = await _walletRepo.GetByIdAsync(walletId);
+            var existingWallet = await _walletRepo.GetByWalletIdAsync(walletId);
             if (existingWallet == null)
             {
                 var newWallet = new WalletSyncInfoTable()
