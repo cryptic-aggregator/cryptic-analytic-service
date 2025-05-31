@@ -23,7 +23,7 @@ public class SyncTransactionService : ISyncTransactionService
         var req = new GetWalletTransactionsRequest
         {
             Address = address,
-            Chain   = chain,
+            Chain = chain,
             SinceTs = sinceTs
         };
         return await _grpcClient.GetWalletTransactionsAsync(req, cancellationToken: ct);

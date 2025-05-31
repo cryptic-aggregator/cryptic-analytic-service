@@ -5,6 +5,7 @@ using CrypticAnalytic.Services.Background;
 using CrypticAnalytic.Services.Config;
 using CrypticAnalytic.Services.gRpc;
 using CrypticAnalytic.Services.Processors;
+using CrypticAnalytic.Services.Processors.MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,16 +13,19 @@ builder.Services.AddGrpc();
 
 var cfg = new ConfigService();
 
+
+
 builder.Services.InjectConfiguration(cfg);
 builder.Services.ConfigureMicroservices(cfg);
 builder.Services.ConfigureRepositories();
-
+builder.Services.AddMassTransitWithRabbitMQ(cfg);
+builder.Services.AddScoped<WalletConnectedProcessor>();
 builder.Services.AddScoped<SyncTransactionProcessor>();
 builder.Services.AddScoped<PortfolioCorrelationService>();
 builder.Services.AddScoped<ITokenPriceProcessor, TokenPriceProcessor>();
-builder.Services.AddHostedService<TokenPriceBackgroundService>();
 builder.Services.AddScoped<ISyncTransactionService, SyncTransactionService>();
-builder.Services.AddHostedService<TestTransactionWorker>();
+/*builder.Services.AddHostedService<TestTransactionWorker>();*/
+builder.Services.AddHostedService<TokenPriceBackgroundService>();
 
 
 var app = builder.Build();

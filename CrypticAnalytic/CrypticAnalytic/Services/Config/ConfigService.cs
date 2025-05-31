@@ -4,13 +4,21 @@ using CrypticAnalytic.Interfaces.Configs;
 
 namespace CrypticAnalytic.Services.Config;
 
-public class ConfigService : IDatabaseConfiguration, IMicroservicesConfig
+public class ConfigService : IDatabaseConfiguration, IMicroservicesConfig, IRabbitMQConfig
 {
     public ConfigService() 
     {
         ConnString = Environment.GetEnvironmentVariable(nameof(this.ConnString)) ?? throw DrawAllConfigVars();
         Schema = $"\"{Environment.GetEnvironmentVariable(nameof(this.Schema))}\"" ?? throw DrawAllConfigVars();
         BlockchainInteractionConnString = Environment.GetEnvironmentVariable(nameof(BlockchainInteractionConnString)) ?? throw new Exception($"You could provide a {nameof(BlockchainInteractionConnString)} env var");
+        RabbitMQ__Username = Environment.GetEnvironmentVariable(nameof(RabbitMQ__Username)) ?? throw new Exception($"You could provide a {nameof(RabbitMQ__Username)} env var");
+        RabbitMQ__Password = Environment.GetEnvironmentVariable(nameof(RabbitMQ__Password)) ?? throw new Exception($"You could provide a {nameof(RabbitMQ__Password)} env var");
+        RabbitMQ__HostName = Environment.GetEnvironmentVariable(nameof(RabbitMQ__HostName)) ?? throw new Exception($"You could provide a {nameof(RabbitMQ__HostName)} env var");
+        RabbitMQ__Port =
+            ushort.TryParse(Environment.GetEnvironmentVariable(nameof(RabbitMQ__Port)), out var rmqport)
+                ? rmqport
+                : throw new Exception($"You could provide a {nameof(RabbitMQ__Port)} env var");
+        RabbitMQ__VHost = Environment.GetEnvironmentVariable(nameof(RabbitMQ__VHost)) ?? throw new Exception($"You could provide a {nameof(RabbitMQ__VHost)} env var");
     }
     
     public string ConnString { get; private set; }
@@ -29,4 +37,10 @@ public class ConfigService : IDatabaseConfiguration, IMicroservicesConfig
         }
         return new Exception(sb.ToString());
     }
+
+    public string RabbitMQ__Username { get; }
+    public string RabbitMQ__Password { get; }
+    public string RabbitMQ__HostName { get; }
+    public ushort RabbitMQ__Port { get; }
+    public string RabbitMQ__VHost { get; }
 }

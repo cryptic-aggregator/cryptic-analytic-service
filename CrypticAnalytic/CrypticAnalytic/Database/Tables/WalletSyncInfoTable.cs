@@ -13,6 +13,6 @@ public class WalletSyncInfoTable : IDatabaseTable
     [Column("last_synced_ts", NpgsqlDbType.Bigint)]
     public long LastSyncedTs { get; set; }
 
-    [Column("updated_at", NpgsqlDbType.TimestampTz)]
-    public DateTime UpdatedAt { get; set; }
+    [Column("updated_at", NpgsqlDbType.Bigint)]
+    public long UpdatedAt { get; set; }
 }

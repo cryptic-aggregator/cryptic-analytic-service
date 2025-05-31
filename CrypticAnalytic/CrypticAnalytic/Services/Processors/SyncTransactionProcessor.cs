@@ -34,7 +34,6 @@ public class SyncTransactionProcessor
         string chain,
         CancellationToken ct)
     {
-        // 1) Дістаємо last_synced_ts з таблиці wallet_sync_info
         var syncInfo = await _walletSyncRepo.GetByWalletIdAsync(walletId);
         long lastTs = syncInfo?.LastSyncedTs ?? 0;
 

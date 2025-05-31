@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <PackageReference Include="Grpc.AspNetCore" Version="2.57.0"/>
+        <PackageReference Include="MassTransit.RabbitMQ" Version="8.4.1" />
     </ItemGroup>
     
     <ItemGroup>
