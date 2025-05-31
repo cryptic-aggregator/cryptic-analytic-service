@@ -31,10 +31,6 @@
         <Protobuf Include="../../cryptic-domain/Cryptic Domain/Protos/PortfolioConfiguration/Rpc/PortfolioConfigurationService.proto" GrpcServices="Server" AdditionalImportDirs="../../cryptic-domain/Cryptic Domain/Protos" />
     </ItemGroup>
     <ItemGroup>
-        <Folder Include=".github\" />
-        <Folder Include="Interfaces\" />
-    </ItemGroup>
-    <ItemGroup>
       <ProjectReference Include="..\..\cryptic-domain\Cryptic Domain\Cryptic Domain.csproj" />
     </ItemGroup>
     
