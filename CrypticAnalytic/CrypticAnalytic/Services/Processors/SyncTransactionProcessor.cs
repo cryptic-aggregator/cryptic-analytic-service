@@ -35,7 +35,7 @@ public class SyncTransactionProcessor
         CancellationToken ct)
     {
         var syncInfo = await _walletSyncRepo.GetByWalletIdAsync(walletId);
-        long lastTs = syncInfo?.LastSyncedTs ?? 0;
+        long lastTs = syncInfo?.LastSyncedTs ?? 365L * 24 * 3600;
 
         _logger.LogInformation(
             "SyncForWalletAsync: walletId={WalletId}, address={Address}, chain={Chain}, sinceTs={SinceTs}",
