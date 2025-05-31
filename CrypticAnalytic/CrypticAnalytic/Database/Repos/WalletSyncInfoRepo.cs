@@ -41,7 +41,7 @@ public class WalletSyncInfoRepo : BaseDbRepo<WalletSyncInfoTable>
         using var cmd = new NpgsqlCommand(insertSql, Connection);
         cmd.Parameters.AddWithValue("WalletId", NpgsqlDbType.Integer, entity.WalletId);
         cmd.Parameters.AddWithValue("LastSyncedTs", NpgsqlDbType.Bigint, entity.LastSyncedTs);
-        cmd.Parameters.AddWithValue("UpdatedAt", NpgsqlDbType.TimestampTz, entity.UpdatedAt);
+        cmd.Parameters.AddWithValue("UpdatedAt", NpgsqlDbType.Bigint, entity.UpdatedAt);
 
         await cmd.ExecuteNonQueryAsync();
         return entity;
@@ -57,7 +57,7 @@ public class WalletSyncInfoRepo : BaseDbRepo<WalletSyncInfoTable>
             ";
         using var cmd = new NpgsqlCommand(updateSql, Connection);
         cmd.Parameters.AddWithValue("LastSyncedTs", NpgsqlDbType.Bigint, newLastSyncedTs);
-        cmd.Parameters.AddWithValue("UpdatedAt", NpgsqlDbType.TimestampTz, DateTime.UtcNow);
+        cmd.Parameters.AddWithValue("UpdatedAt", NpgsqlDbType.Bigint, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         cmd.Parameters.AddWithValue("WalletId", NpgsqlDbType.Integer, walletId);
 
         var affected = await cmd.ExecuteNonQueryAsync();
@@ -75,7 +75,7 @@ public class WalletSyncInfoRepo : BaseDbRepo<WalletSyncInfoTable>
             ";
         using var cmdUpdate = new NpgsqlCommand(updateSql, Connection);
         cmdUpdate.Parameters.AddWithValue("LastSyncedTs", NpgsqlDbType.Bigint, newLastSyncedTs);
-        cmdUpdate.Parameters.AddWithValue("UpdatedAt", NpgsqlDbType.TimestampTz, DateTime.UtcNow);
+        cmdUpdate.Parameters.AddWithValue("UpdatedAt", NpgsqlDbType.Bigint, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         cmdUpdate.Parameters.AddWithValue("WalletId", NpgsqlDbType.Integer, walletId);
 
         var affected = await cmdUpdate.ExecuteNonQueryAsync();
