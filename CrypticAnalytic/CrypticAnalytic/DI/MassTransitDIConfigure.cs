@@ -19,6 +19,11 @@ public static class MassTransitDIConfigure
                     h.Username(rabbitMqConfig.RabbitMQ__Username);
                     h.Password(rabbitMqConfig.RabbitMQ__Password);
                 });
+                
+                cfg.ReceiveEndpoint($"cryptic-analytic-{nameof(WalletConnectedConsumer)}", e =>
+                {
+                    e.ConfigureConsumer<WalletConnectedConsumer>(context);
+                });
             });
         });
         
