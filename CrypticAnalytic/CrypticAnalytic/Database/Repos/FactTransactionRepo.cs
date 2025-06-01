@@ -5,6 +5,7 @@ using Cryptic_Domain.Database.Interfaces;
 using Cryptic_Domain.Database.Repos.Base;
 using Cryptic_Domain.Helpers;
 using CrypticAnalytic.Database.Tables;
+using CrypticAnalytic.Models;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -18,12 +19,12 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
         : base(connectionService, configuration)
     {
     }
-    
+
     public async Task CreateBatchAsync(IEnumerable<FactTransactionTable> entities)
     {
         var list = entities as IList<FactTransactionTable> ?? new List<FactTransactionTable>(entities);
         if (list.Count == 0) return;
-        
+
         var columns = new[]
         {
             "wallet_id",
@@ -36,10 +37,10 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
             "transaction_type",
             "chain"
         };
-        
+
         var sb = new StringBuilder();
         sb.Append($"INSERT INTO {FullTablePath} ({string.Join(", ", columns)}) VALUES ");
-        
+
         for (int i = 0; i < list.Count; i++)
         {
             var prefix = $"@p{i}_";
@@ -58,7 +59,7 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
             if (i < list.Count - 1)
                 sb.Append(", ");
         }
-        
+
         sb.Append(" ON CONFLICT (transaction_hash) DO NOTHING;");
 
         using var cmd = new NpgsqlCommand(sb.ToString(), Connection);
@@ -78,13 +79,10 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
             cmd.Parameters.AddWithValue(prefix + "TxType", NpgsqlDbType.Integer, entity.TransactionType);
             cmd.Parameters.AddWithValue(prefix + "Chain", NpgsqlDbType.Varchar, entity.Chain);
         }
-        
+
         var affectedRows = await cmd.ExecuteNonQueryAsync();
     }
 
-    /// <summary>
-    /// Створює один запис у fact_transaction.
-    /// </summary>
     public async Task<FactTransactionTable> CreateAsync(FactTransactionTable entity)
     {
         var insertSql = $@"
@@ -112,13 +110,134 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
             entity.TransactionId = newId;
             return entity;
         }
-        
+
         return default;
     }
 
-    /// <summary>
-    /// Перевіряє, чи існує транзакція з таким hash (щоб уникнути дублів).
-    /// </summary>
+    public async Task<(List<TransactionRecord> Records, int Total)> GetPagedWithTokenInfoAsync(
+        int[] walletIds,
+        int? transactionType,
+        long? tsFrom,
+        long? tsTo,
+        int offset,
+        int limit)
+    {
+        if (walletIds == null || walletIds.Length == 0)
+            return (new List<TransactionRecord>(), 0);
+
+        var whereFilter = new StringBuilder();
+        whereFilter.Append("wallet_id = ANY(@WalletIds)");
+        if (transactionType.HasValue)
+            whereFilter.Append(" AND transaction_type = @TransactionType");
+        if (tsFrom.HasValue)
+            whereFilter.Append(" AND ts >= @TsFrom");
+        if (tsTo.HasValue)
+            whereFilter.Append(" AND ts <= @TsTo");
+
+        var countSql = $@"
+                SELECT COUNT(*) 
+                FROM {FullTablePath}
+                WHERE {whereFilter};
+            ";
+
+        int total;
+        await using (var countCmd = new NpgsqlCommand(countSql, Connection))
+        {
+            countCmd.Parameters.AddWithValue("WalletIds", NpgsqlDbType.Array | NpgsqlDbType.Integer, walletIds);
+            if (transactionType.HasValue)
+                countCmd.Parameters.AddWithValue("TransactionType", NpgsqlDbType.Integer, transactionType.Value);
+            if (tsFrom.HasValue)
+                countCmd.Parameters.AddWithValue("TsFrom", NpgsqlDbType.Bigint, tsFrom.Value);
+            if (tsTo.HasValue)
+                countCmd.Parameters.AddWithValue("TsTo", NpgsqlDbType.Bigint, tsTo.Value);
+
+            var totalObj = await countCmd.ExecuteScalarAsync();
+            total = Convert.ToInt32(totalObj);
+        }
+
+        var sqlBuilder = new StringBuilder();
+        sqlBuilder.Append($@"
+                SELECT
+                  ft.transaction_id,
+                  ft.wallet_id,
+                  ft.token_id,
+                  ft.transaction_hash,
+                  ft.from_address,
+                  ft.to_address,
+                  ft.amount,
+                  ft.ts,
+                  ft.transaction_type,
+                  ft.chain,
+
+                  dt.symbol,
+                  dt.name,
+                  dt.logo_uri,
+
+                  COALESCE(fp.price, 0) AS last_price
+
+                FROM {FullTablePath} AS ft
+                JOIN {Schema}.dim_token AS dt
+                  ON ft.token_id = dt.token_id
+
+                LEFT JOIN LATERAL (
+                  SELECT price
+                  FROM {Schema}.fact_token_price
+                  WHERE token_id = ft.token_id
+                  ORDER BY ts_snapshot DESC
+                  LIMIT 1
+                ) AS fp ON TRUE
+
+                WHERE {whereFilter}
+                ORDER BY ft.ts DESC
+                LIMIT @Limit OFFSET @Offset;
+            ");
+
+        var records = new List<TransactionRecord>();
+        await using (var dataCmd = new NpgsqlCommand(sqlBuilder.ToString(), Connection))
+        {
+            dataCmd.Parameters.AddWithValue("WalletIds", NpgsqlDbType.Array | NpgsqlDbType.Integer, walletIds);
+            if (transactionType.HasValue)
+                dataCmd.Parameters.AddWithValue("TransactionType", NpgsqlDbType.Integer, transactionType.Value);
+            if (tsFrom.HasValue)
+                dataCmd.Parameters.AddWithValue("TsFrom", NpgsqlDbType.Bigint, tsFrom.Value);
+            if (tsTo.HasValue)
+                dataCmd.Parameters.AddWithValue("TsTo", NpgsqlDbType.Bigint, tsTo.Value);
+
+            dataCmd.Parameters.AddWithValue("Limit", NpgsqlDbType.Integer, limit);
+            dataCmd.Parameters.AddWithValue("Offset", NpgsqlDbType.Integer, offset);
+
+            await using (var reader = await dataCmd.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                {
+                    var rec = new TransactionRecord
+                    {
+                        TransactionId = reader.GetInt64(0),
+                        WalletId = reader.GetInt32(1),
+                        TokenId = reader.GetInt32(2),
+                        TransactionHash = reader.GetString(3),
+                        FromAddress = reader.GetString(4),
+                        ToAddress = reader.GetString(5),
+                        Amount = reader.GetDecimal(6),
+                        Ts = reader.GetInt64(7),
+                        TransactionType = reader.GetInt32(8),
+                        Chain = reader.GetString(9),
+
+                        Symbol = reader.GetString(10),
+                        Name = reader.GetString(11),
+                        LogoUri = reader.GetString(12),
+
+                        LastPrice = reader.GetDecimal(13)
+                    };
+                    records.Add(rec);
+                }
+            }
+        }
+
+        return (records, total);
+    }
+
+
     public async Task<bool> ExistsByHashAsync(string txHash)
     {
         var sql = $"SELECT 1 FROM {FullTablePath} WHERE transaction_hash = @TxHash LIMIT 1";
@@ -129,9 +248,6 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
         return result != null;
     }
 
-    /// <summary>
-    /// Отримує всі транзакції для заданого wallet_id.
-    /// </summary>
     public async Task<List<FactTransactionTable>> GetByWalletIdAsync(int walletId)
     {
         var sql = $"SELECT {string.Join(", ", Columns)} FROM {FullTablePath} WHERE wallet_id = @WalletId";
@@ -148,9 +264,6 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
         return list;
     }
 
-    /// <summary>
-    /// Видаляє транзакцію за ID.
-    /// </summary>
     public async Task DeleteAsync(long transactionId)
     {
         using var cmd = new NpgsqlCommand($"DELETE FROM {FullTablePath} WHERE transaction_id = @Id", Connection);
@@ -159,7 +272,7 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
         if (affected == 0)
             throw new ArgumentException($"Transaction {transactionId} not found or already deleted.");
     }
-    
+
     public async Task<Dictionary<int, decimal>> GetAllTokenBalancesAtAsync(int walletId, long snapshotTs)
     {
         const string sql = @"
@@ -178,7 +291,7 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
             ";
 
         using var cmd = new NpgsqlCommand(
-            sql.Replace("{schema}.{table}", FullTablePath), 
+            sql.Replace("{schema}.{table}", FullTablePath),
             Connection);
         cmd.Parameters.AddWithValue("WalletId", NpgsqlDbType.Integer, walletId);
         cmd.Parameters.AddWithValue("SnapshotTs", NpgsqlDbType.Bigint, snapshotTs);
@@ -195,4 +308,3 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
         return dict;
     }
 }
-    

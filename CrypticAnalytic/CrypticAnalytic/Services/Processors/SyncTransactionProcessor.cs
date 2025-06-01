@@ -1,5 +1,7 @@
 using System.Globalization;
+using Cryptic.BlockchainInteraction.Models.Requests;
 using Cryptic.BlockchainInteraction.Models.Responses;
+using Cryptic.BlockchainInteraction.Rpc;
 using CrypticAnalytic.Database.Repos;
 using CrypticAnalytic.Database.Tables;
 using CrypticAnalytic.Interfaces;
@@ -13,19 +15,21 @@ public class SyncTransactionProcessor
     private readonly DimTokenRepo _tokenRepo;
     private readonly FactTransactionRepo _txRepo;
     private readonly WalletSyncInfoRepo _walletSyncRepo;
+    private readonly WalletService.WalletServiceClient _walletClient;
 
     public SyncTransactionProcessor(
         ILogger<SyncTransactionProcessor> logger,
         ISyncTransactionService grpcClient,
         DimTokenRepo tokenRepo,
         FactTransactionRepo txRepo,
-        WalletSyncInfoRepo walletSyncRepo)
+        WalletSyncInfoRepo walletSyncRepo, WalletService.WalletServiceClient walletClient)
     {
         _logger = logger;
         _grpcClient = grpcClient;
         _tokenRepo = tokenRepo;
         _txRepo = txRepo;
         _walletSyncRepo = walletSyncRepo;
+        _walletClient = walletClient;
     }
 
     public async Task<long> SyncForWalletAsync(

@@ -20,8 +20,8 @@ public class TestTransactionWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        const string address = "0x2649A160Dc7DF59942Ab8Dc122e2B28E0faF1b69";
-        const string chain = "eth";
+        const string address = "DSfcX6c62jYwaqtFbG7xiqpxGKHuWKggAmHGTrBFkoiE";
+        const string chain = "solana";
         long sinceTs = 1726532288;
 
         while (!stoppingToken.IsCancellationRequested)

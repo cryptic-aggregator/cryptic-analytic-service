@@ -24,8 +24,8 @@ builder.Services.AddScoped<SyncTransactionProcessor>();
 builder.Services.AddScoped<PortfolioCorrelationService>();
 builder.Services.AddScoped<ITokenPriceProcessor, TokenPriceProcessor>();
 builder.Services.AddScoped<ISyncTransactionService, SyncTransactionService>();
-/*builder.Services.AddHostedService<TestTransactionWorker>();*/
 builder.Services.AddHostedService<TokenPriceBackgroundService>();
+builder.Services.AddHostedService<TestTransactionWorker>();
 
 
 var app = builder.Build();

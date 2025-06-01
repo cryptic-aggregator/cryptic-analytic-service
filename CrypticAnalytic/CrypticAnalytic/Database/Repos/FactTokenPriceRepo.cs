@@ -3,6 +3,7 @@ using Cryptic_Domain.Database.Config.Interfaces;
 using Cryptic_Domain.Database.Interfaces;
 using Cryptic_Domain.Database.Repos.Base;
 using CrypticAnalytic.Database.Tables;
+using CrypticAnalytic.Models;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -44,8 +45,7 @@ public class FactTokenPriceRepo : BaseDbRepo<FactTokenPriceTable>
             var lastTs = reader.GetInt64(1);
             result[tId] = lastTs;
         }
-
-        // Тепер нам треба переконатися, що у словнику є ключі для всіх tokenIds; якщо якогось немає — ставимо 0
+        
         foreach (var id in tokenIds)
         {
             if (!result.ContainsKey(id))
@@ -54,7 +54,7 @@ public class FactTokenPriceRepo : BaseDbRepo<FactTokenPriceTable>
 
         return result;
     }
-    
+
     public async Task<decimal> GetLastPriceAtAsync(int tokenId, int currency, long snapshotTs)
     {
         const string sql = @"
@@ -79,10 +79,7 @@ public class FactTokenPriceRepo : BaseDbRepo<FactTokenPriceTable>
         if (result is double dbl) return Convert.ToDecimal(dbl);
         return 0m;
     }
-
-    /// <summary>
-    /// Batch-вставка fact_token_price, як і раніше.
-    /// </summary>
+    
     public async Task CreateBatchAsync(IEnumerable<FactTokenPriceTable> entities)
     {
         var list = entities as IList<FactTokenPriceTable> ?? new List<FactTokenPriceTable>(entities);
