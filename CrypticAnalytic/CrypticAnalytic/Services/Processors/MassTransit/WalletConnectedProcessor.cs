@@ -38,7 +38,7 @@ public class WalletConnectedProcessor
                 var newWallet = new WalletSyncInfoTable()
                 {
                     WalletId = walletId,
-                    LastSyncedTs = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    LastSyncedTs = 0,
                     UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                 };
                 await _walletRepo.CreateAsync(newWallet);
