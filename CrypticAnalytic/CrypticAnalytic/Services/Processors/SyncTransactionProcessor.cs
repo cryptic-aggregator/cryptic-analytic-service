@@ -133,6 +133,7 @@ public class SyncTransactionProcessor
                 _logger.LogWarning("Could not parse amount '{AmountStr}' for tx {TxHash}", t.Amount, t.TransactionHash);
                 continue;
             }
+            decimal truncatedAmount = Math.Truncate(parsedAmount * 1_000_000m) / 1_000_000m;
 
             var fact = new FactTransactionTable
             {
@@ -141,7 +142,7 @@ public class SyncTransactionProcessor
                 TransactionHash = t.TransactionHash,
                 FromAddress = t.FromAddress ?? string.Empty,
                 ToAddress = t.ToAddress ?? string.Empty,
-                Amount = parsedAmount,
+                Amount = truncatedAmount,
                 Ts = txTs,
                 TransactionType = t.TransactionType,
                 Chain = chain
