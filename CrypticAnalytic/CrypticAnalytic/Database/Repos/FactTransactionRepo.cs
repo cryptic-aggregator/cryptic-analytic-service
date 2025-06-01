@@ -183,7 +183,7 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
                   SELECT price
                   FROM {Schema}.fact_token_price
                   WHERE token_id = ft.token_id
-                  ORDER BY ts_snapshot DESC
+                  ORDER BY price_date DESC
                   LIMIT 1
                 ) AS fp ON TRUE
 
