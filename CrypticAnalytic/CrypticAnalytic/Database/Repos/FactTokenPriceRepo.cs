@@ -87,10 +87,7 @@ public class FactTokenPriceRepo : BaseDbRepo<FactTokenPriceTable>
 
         var columns = new[]
         {
-            "token_id",
-            "price",
-            "price_date",
-            "currency"
+            "token_id", "price", "price_date", "currency"
         };
 
         var sb = new StringBuilder();

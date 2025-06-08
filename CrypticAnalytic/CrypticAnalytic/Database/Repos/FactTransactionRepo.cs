@@ -27,15 +27,8 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
 
         var columns = new[]
         {
-            "wallet_id",
-            "token_id",
-            "transaction_hash",
-            "from_address",
-            "to_address",
-            "amount",
-            "ts",
-            "transaction_type",
-            "chain"
+            "wallet_id", "token_id", "transaction_hash", "from_address", "to_address", "amount", "ts",
+            "transaction_type", "chain"
         };
 
         var sb = new StringBuilder();
@@ -115,12 +108,7 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
     }
 
     public async Task<(List<TransactionRecord> Records, int Total)> GetPagedWithTokenInfoAsync(
-        int[] walletIds,
-        int? transactionType,
-        long? tsFrom,
-        long? tsTo,
-        int offset,
-        int limit)
+        int[] walletIds, int? transactionType, long? tsFrom, long? tsTo, int offset, int limit)
     {
         if (walletIds == null || walletIds.Length == 0)
             return (new List<TransactionRecord>(), 0);
@@ -158,27 +146,12 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
         var sqlBuilder = new StringBuilder();
         sqlBuilder.Append($@"
                 SELECT
-                  ft.transaction_id,
-                  ft.wallet_id,
-                  ft.token_id,
-                  ft.transaction_hash,
-                  ft.from_address,
-                  ft.to_address,
-                  ft.amount,
-                  ft.ts,
-                  ft.transaction_type,
-                  ft.chain,
-
-                  dt.symbol,
-                  dt.name,
-                  dt.logo_uri,
-
-                  COALESCE(fp.price, 0) AS last_price
-
+                  ft.transaction_id, ft.wallet_id, ft.token_id, ft.transaction_hash, ft.from_address, ft.to_address,
+                  ft.amount, ft.ts, ft.transaction_type, ft.chain, dt.symbol, dt.name, dt.logo_uri, COALESCE(fp.price, 0) AS last_price
+                
                 FROM {FullTablePath} AS ft
                 JOIN {Schema}.dim_token AS dt
                   ON ft.token_id = dt.token_id
-
                 LEFT JOIN LATERAL (
                   SELECT price
                   FROM {Schema}.fact_token_price
@@ -259,6 +232,38 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
         while (await reader.ReadAsync())
         {
             list.Add(await reader.MapAsync<FactTransactionTable>());
+        }
+
+        return list;
+    }
+
+    public async Task<List<WalletSeedInfo>> GetUninitializedWalletsAsync()
+    {
+        var sql = $@"
+        SELECT DISTINCT ON (ft.wallet_id)
+            ft.wallet_id,
+            ft.from_address    AS wallet_address,
+            ft.chain,
+            ft.ts              AS since_ts
+        FROM {FullTablePath} AS ft
+        LEFT JOIN {Schema}.wallet_sync_info AS wsi
+          ON ft.wallet_id = wsi.wallet_id
+        WHERE  ft.transaction_type = 1
+        ORDER BY ft.wallet_id, ft.ts ASC;
+    ";
+
+        var list = new List<WalletSeedInfo>();
+        await using var cmd = new NpgsqlCommand(sql, Connection);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            list.Add(new WalletSeedInfo
+            {
+                WalletId = reader.GetInt32(0),
+                WalletAddress = reader.GetString(1),
+                Chain = reader.GetString(2),
+                SinceTs = reader.GetInt64(3)
+            });
         }
 
         return list;

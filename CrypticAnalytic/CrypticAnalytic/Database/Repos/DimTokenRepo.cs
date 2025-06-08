@@ -199,7 +199,6 @@ public class DimTokenRepo : BaseDbRepo<DimTokenTable>
 
         sb.Append($@" ON CONFLICT (contract_address) DO NOTHING
                           RETURNING token_id, contract_address;");
-
         using var cmd = new NpgsqlCommand(sb.ToString(), Connection);
 
         for (int i = 0; i < list.Count; i++)
