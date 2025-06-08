@@ -60,6 +60,7 @@ public class TransactionServiceImpl : AnalyticTransactionService.AnalyticTransac
                 txTypeFilter,
                 tsFrom,
                 tsTo,
+                request.Search,
                 offset,
                 perPage);
 

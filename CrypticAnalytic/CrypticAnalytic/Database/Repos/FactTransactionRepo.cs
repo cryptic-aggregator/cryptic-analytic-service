@@ -108,25 +108,34 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
     }
 
     public async Task<(List<TransactionRecord> Records, int Total)> GetPagedWithTokenInfoAsync(
-        int[] walletIds, int? transactionType, long? tsFrom, long? tsTo, int offset, int limit)
+        int[] walletIds,
+        int? transactionType,
+        long? tsFrom,
+        long? tsTo,
+        string? search,
+        int offset,
+        int limit)
     {
         if (walletIds == null || walletIds.Length == 0)
             return (new List<TransactionRecord>(), 0);
 
         var whereFilter = new StringBuilder();
         whereFilter.Append("wallet_id = ANY(@WalletIds)");
+
         if (transactionType.HasValue)
             whereFilter.Append(" AND transaction_type = @TransactionType");
         if (tsFrom.HasValue)
             whereFilter.Append(" AND ts >= @TsFrom");
         if (tsTo.HasValue)
             whereFilter.Append(" AND ts <= @TsTo");
-
+        if (!string.IsNullOrWhiteSpace(search))
+            whereFilter.Append(" AND (ft.from_address ILIKE @Search OR ft.to_address ILIKE @Search)");
+        
         var countSql = $@"
-                SELECT COUNT(*) 
-                FROM {FullTablePath}
-                WHERE {whereFilter};
-            ";
+        SELECT COUNT(*) 
+        FROM {FullTablePath} AS ft
+        WHERE {whereFilter};
+    ";
 
         int total;
         await using (var countCmd = new NpgsqlCommand(countSql, Connection))
@@ -138,35 +147,36 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
                 countCmd.Parameters.AddWithValue("TsFrom", NpgsqlDbType.Bigint, tsFrom.Value);
             if (tsTo.HasValue)
                 countCmd.Parameters.AddWithValue("TsTo", NpgsqlDbType.Bigint, tsTo.Value);
+            if (!string.IsNullOrWhiteSpace(search))
+                countCmd.Parameters.AddWithValue("Search", NpgsqlDbType.Varchar, $"%{search}%");
 
-            var totalObj = await countCmd.ExecuteScalarAsync();
-            total = Convert.ToInt32(totalObj);
+            total = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
         }
-
-        var sqlBuilder = new StringBuilder();
-        sqlBuilder.Append($@"
-                SELECT
-                  ft.transaction_id, ft.wallet_id, ft.token_id, ft.transaction_hash, ft.from_address, ft.to_address,
-                  ft.amount, ft.ts, ft.transaction_type, ft.chain, dt.symbol, dt.name, dt.logo_uri, COALESCE(fp.price, 0) AS last_price
-                
-                FROM {FullTablePath} AS ft
-                JOIN {Schema}.dim_token AS dt
-                  ON ft.token_id = dt.token_id
-                LEFT JOIN LATERAL (
-                  SELECT price
-                  FROM {Schema}.fact_token_price
-                  WHERE token_id = ft.token_id
-                  ORDER BY price_date DESC
-                  LIMIT 1
-                ) AS fp ON TRUE
-
-                WHERE {whereFilter}
-                ORDER BY ft.ts DESC
-                LIMIT @Limit OFFSET @Offset;
-            ");
+        
+        var sql = $@"
+        SELECT
+          ft.transaction_id, ft.wallet_id, ft.token_id,
+          ft.transaction_hash, ft.from_address, ft.to_address,
+          ft.amount, ft.ts, ft.transaction_type, ft.chain,
+          dt.symbol, dt.name, dt.logo_uri,
+          COALESCE(fp.price, 0) AS last_price
+        FROM {FullTablePath} AS ft
+        JOIN {Schema}.dim_token AS dt
+          ON ft.token_id = dt.token_id
+        LEFT JOIN LATERAL (
+          SELECT price
+          FROM {Schema}.fact_token_price
+          WHERE token_id = ft.token_id
+          ORDER BY price_date DESC
+          LIMIT 1
+        ) AS fp ON TRUE
+        WHERE {whereFilter}
+        ORDER BY ft.ts DESC
+        LIMIT @Limit OFFSET @Offset;
+    ";
 
         var records = new List<TransactionRecord>();
-        await using (var dataCmd = new NpgsqlCommand(sqlBuilder.ToString(), Connection))
+        await using (var dataCmd = new NpgsqlCommand(sql, Connection))
         {
             dataCmd.Parameters.AddWithValue("WalletIds", NpgsqlDbType.Array | NpgsqlDbType.Integer, walletIds);
             if (transactionType.HasValue)
@@ -175,6 +185,8 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
                 dataCmd.Parameters.AddWithValue("TsFrom", NpgsqlDbType.Bigint, tsFrom.Value);
             if (tsTo.HasValue)
                 dataCmd.Parameters.AddWithValue("TsTo", NpgsqlDbType.Bigint, tsTo.Value);
+            if (!string.IsNullOrWhiteSpace(search))
+                dataCmd.Parameters.AddWithValue("Search", NpgsqlDbType.Varchar, $"%{search}%");
 
             dataCmd.Parameters.AddWithValue("Limit", NpgsqlDbType.Integer, limit);
             dataCmd.Parameters.AddWithValue("Offset", NpgsqlDbType.Integer, offset);
@@ -183,7 +195,7 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
             {
                 while (await reader.ReadAsync())
                 {
-                    var rec = new TransactionRecord
+                    records.Add(new TransactionRecord
                     {
                         TransactionId = reader.GetInt64(0),
                         WalletId = reader.GetInt32(1),
@@ -195,14 +207,11 @@ public class FactTransactionRepo : BaseDbRepo<FactTransactionTable>
                         Ts = reader.GetInt64(7),
                         TransactionType = reader.GetInt32(8),
                         Chain = reader.GetString(9),
-
                         Symbol = reader.GetString(10),
                         Name = reader.GetString(11),
                         LogoUri = reader.GetString(12),
-
-                        LastPrice = reader.GetDecimal(13)
-                    };
-                    records.Add(rec);
+                        LastPrice = reader.GetDecimal(13),
+                    });
                 }
             }
         }
