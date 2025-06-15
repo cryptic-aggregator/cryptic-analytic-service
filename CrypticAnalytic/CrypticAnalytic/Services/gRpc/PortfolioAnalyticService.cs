@@ -9,7 +9,8 @@ namespace CrypticAnalytic.Services.gRpc;
 public class
     PortfolioAnalyticService : Cryptic.PortfolioAnalytic.Rpc.PortfolioAnalyticService.PortfolioAnalyticServiceBase
 {
-    public PortfolioAnalyticService(PortfolioCorrelationService portfolioCorrelationService, DimTokenRepo tokenRepo, FactTokenPriceRepo factToken, FactTransactionRepo txRepo)
+    public PortfolioAnalyticService(PortfolioCorrelationService portfolioCorrelationService, DimTokenRepo tokenRepo,
+        FactTokenPriceRepo factToken, FactTransactionRepo txRepo)
     {
         _portfolioCorrelationService = portfolioCorrelationService;
         _tokenRepo = tokenRepo;
@@ -142,6 +143,48 @@ public class
                 Ts = sampleTs[i],
                 Profit = delta > 0 ? (double)delta : 0,
                 Loss = delta < 0 ? (double)(-delta) : 0
+            });
+        }
+
+        return resp;
+    }
+
+    public override async Task<GetPortfolioBalancePointsResponse> GetPortfolioBalancePoints(
+        GetPortfolioBalancePointsRequest request,
+        ServerCallContext context)
+    {
+        var resp = new GetPortfolioBalancePointsResponse
+        {
+            Result = new TaskResponse { Success = true }
+        };
+        if (request.WalletIds.Count == 0 || request.PointsCount < 2 || request.FromTs >= request.ToTs)
+            return resp;
+
+        double span = request.ToTs - request.FromTs;
+        double step = span / (request.PointsCount - 1);
+        var sampleTs = Enumerable.Range(0, request.PointsCount)
+            .Select(i => request.FromTs + (long)Math.Round(step * i))
+            .ToArray();
+
+        for (int i = 0; i < sampleTs.Length; i++)
+        {
+            long ts = sampleTs[i];
+            decimal total = 0m;
+
+            foreach (var wid in request.WalletIds)
+            {
+                var balances = await _txRepo.GetAllTokenBalancesAtAsync(wid, ts);
+                foreach (var kv in balances)
+                {
+                    var price = await _factToken.GetLastPriceAtAsync(kv.Key, currency: 0, ts);
+                    total += kv.Value * price;
+                }
+            }
+
+            resp.Points.Add(new BalancePoint
+            {
+                Ts = ts,
+                Balance = (double)total
             });
         }
 
