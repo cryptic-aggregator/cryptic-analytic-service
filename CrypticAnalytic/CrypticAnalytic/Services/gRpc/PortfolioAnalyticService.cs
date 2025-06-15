@@ -1,5 +1,7 @@
+using Cryptic.Base.V1.Models.Responses;
 using Cryptic.PortfolioAnalytic.Models.Requests;
 using Cryptic.PortfolioAnalytic.Models.Responses;
+using CrypticAnalytic.Database.Repos;
 using Grpc.Core;
 
 namespace CrypticAnalytic.Services.gRpc;
@@ -7,9 +9,12 @@ namespace CrypticAnalytic.Services.gRpc;
 public class
     PortfolioAnalyticService : Cryptic.PortfolioAnalytic.Rpc.PortfolioAnalyticService.PortfolioAnalyticServiceBase
 {
-    public PortfolioAnalyticService(PortfolioCorrelationService portfolioCorrelationService)
+    public PortfolioAnalyticService(PortfolioCorrelationService portfolioCorrelationService, DimTokenRepo tokenRepo, FactTokenPriceRepo factToken, FactTransactionRepo txRepo)
     {
         _portfolioCorrelationService = portfolioCorrelationService;
+        _tokenRepo = tokenRepo;
+        _factToken = factToken;
+        _txRepo = txRepo;
     }
 
     public override Task<CalculateWalletResponse> GetAssetAllocations(CalculateWalletRequest request,
@@ -83,5 +88,68 @@ public class
         return response;
     }
 
+    public override async Task<GetPortfolioPnlPointsResponse> GetPortfolioPnlPoints(
+        GetPortfolioPnlPointsRequest request,
+        ServerCallContext context)
+    {
+        var resp = new GetPortfolioPnlPointsResponse
+        {
+            Result = new TaskResponse { Success = true }
+        };
+
+        if (request.WalletIds.Count == 0 || request.PointsCount < 2)
+            return resp;
+
+        var fromTs = request.FromTs;
+        var toTs = request.ToTs;
+        var count = request.PointsCount;
+        double span = toTs - fromTs;
+        double step = span / (count - 1);
+
+        var sampleTs = Enumerable
+            .Range(0, count)
+            .Select(i => fromTs + (long)Math.Round(step * i))
+            .ToArray();
+
+        var series = new decimal[count];
+        for (int i = 0; i < count; i++)
+        {
+            long ts = sampleTs[i];
+            decimal value = 0m;
+
+            foreach (var wid in request.WalletIds)
+            {
+                var balances = await _txRepo.GetAllTokenBalancesAtAsync(wid, ts);
+                foreach (var kv in balances)
+                {
+                    int tokenId = kv.Key;
+                    decimal bal = kv.Value;
+                    if (bal <= 0) continue;
+                    var price = await _factToken.GetLastPriceAtAsync(tokenId, currency: 0, ts);
+                    value += bal * price;
+                }
+            }
+
+            series[i] = value;
+        }
+
+        decimal baseVal = series[0];
+        for (int i = 0; i < count; i++)
+        {
+            decimal delta = series[i] - baseVal;
+            resp.Points.Add(new PnlPoint
+            {
+                Ts = sampleTs[i],
+                Profit = delta > 0 ? (double)delta : 0,
+                Loss = delta < 0 ? (double)(-delta) : 0
+            });
+        }
+
+        return resp;
+    }
+
     private readonly PortfolioCorrelationService _portfolioCorrelationService;
+    private readonly DimTokenRepo _tokenRepo;
+    private readonly FactTokenPriceRepo _factToken;
+    private readonly FactTransactionRepo _txRepo;
 }
