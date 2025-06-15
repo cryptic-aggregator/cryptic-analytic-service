@@ -126,7 +126,7 @@ public class
                     int tokenId = kv.Key;
                     decimal bal = kv.Value;
                     if (bal <= 0) continue;
-                    var price = await _factToken.GetLastPriceAtAsync(tokenId, currency: 0, ts);
+                    var price = await _factToken.GetLastPriceAtAsync(tokenId, currency: 1, ts);
                     value += bal * price;
                 }
             }
@@ -176,7 +176,7 @@ public class
                 var balances = await _txRepo.GetAllTokenBalancesAtAsync(wid, ts);
                 foreach (var kv in balances)
                 {
-                    var price = await _factToken.GetLastPriceAtAsync(kv.Key, currency: 0, ts);
+                    var price = await _factToken.GetLastPriceAtAsync(kv.Key, currency: 1, ts);
                     total += kv.Value * price;
                 }
             }
